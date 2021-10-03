@@ -5,6 +5,7 @@
 #include "allocators.hpp"
 #include <functional>
 #include <cstring>
+#include <tuple> 
 
 namespace ssq {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -179,6 +180,30 @@ namespace ssq {
 
                     callGlobal(vm, funcPtr, index_range<offet, sizeof...(Args) + offet>());
                     return 0;
+                } catch (std::exception& e) {
+                    return sq_throwerror(vm, e.what());
+                }
+            }
+        };
+
+        template<typename... Rets, size_t... Is>
+        static void for_each_push(HSQUIRRELVM vm, std::tuple<Rets...>&& t, index_list<Is...>) {
+            int dummy[sizeof...(Is)] = {(push(vm, std::get<Is>(t)), Is)...};
+        }
+
+        template<int offet, typename... Rets, typename... Args>
+        struct func<offet, std::tuple<Rets...> , Args...> {
+            static SQInteger global(HSQUIRRELVM vm) {
+                try {
+                    std::cerr << "global" << std::endl;
+
+                    FuncPtr<std::tuple<Rets...>(Args...)>* funcPtr;
+                    sq_getuserdata(vm, -1, reinterpret_cast<void**>(&funcPtr), nullptr);
+
+                    for_each_push(vm, std::forward<std::tuple<Rets...>>(
+                        callGlobal(vm, funcPtr, index_range<offet, sizeof...(Args) + offet>())), 
+                        index_range<0, sizeof...(Rets)>());
+                    return (sizeof...(Rets));
                 } catch (std::exception& e) {
                     return sq_throwerror(vm, e.what());
                 }

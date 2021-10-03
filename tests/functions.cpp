@@ -705,3 +705,30 @@ TEST_CASE("Test passing instance") {
     ssq::Script script = vm.compileSource(source.c_str());
     vm.run(script);
 }
+
+
+TEST_CASE("Test return tuple") {
+    ssq::VM vm(1024);
+
+    vm.addFunc("baz", [&]() -> std::tuple<int, float> {
+        return std::make_tuple(1, 5.2f);
+    });
+
+    static const std::string source = R"(
+		local data, data2 = baz();
+        function SquirrelFunc()
+        {
+        return 1,2;
+        }
+
+        local test,test2 = SquirrelFunc();
+        print(test);
+        print(test2);
+        print(data);
+        print(data2);
+    )";
+
+    ssq::Script script = vm.compileSource(source.c_str());
+    vm.run(script);
+
+}
