@@ -186,11 +186,6 @@ namespace ssq {
             }
         };
 
-        template<typename... Rets, size_t... Is>
-        static void for_each_push(HSQUIRRELVM vm, std::tuple<Rets...>&& t, index_list<Is...>) {
-            int dummy[sizeof...(Is)] = {(push(vm, std::get<Is>(t)), Is)...};
-        }
-
         template<int offet, typename... Rets, typename... Args>
         struct func<offet, std::tuple<Rets...> , Args...> {
             static SQInteger global(HSQUIRRELVM vm) {
@@ -200,15 +195,33 @@ namespace ssq {
                     FuncPtr<std::tuple<Rets...>(Args...)>* funcPtr;
                     sq_getuserdata(vm, -1, reinterpret_cast<void**>(&funcPtr), nullptr);
 
-                    for_each_push(vm, std::forward<std::tuple<Rets...>>(
-                        callGlobal(vm, funcPtr, index_range<offet, sizeof...(Args) + offet>())), 
-                        index_range<0, sizeof...(Rets)>());
-                    return (sizeof...(Rets));
+                    Array arr(vm, std::forward<std::tuple<Rets...>>(
+                        callGlobal(vm, funcPtr, index_range<offet, sizeof...(Args) + offet>())));
+                    detail::push(vm, arr);
+                    return 1;
                 } catch (std::exception& e) {
                     return sq_throwerror(vm, e.what());
                 }
             }
         };
+
+        template<int offet, typename Ret, typename... Args>
+        struct func<offet, std::vector<Ret>, Args...> {
+            static SQInteger global(HSQUIRRELVM vm) {
+                try {
+                    FuncPtr<std::vector<Ret>(Args...)>* funcPtr;
+                    sq_getuserdata(vm, -1, reinterpret_cast<void**>(&funcPtr), nullptr);
+
+                    Array arr(vm, std::forward<std::vector<Ret>>(
+                        callGlobal(vm, funcPtr, index_range<offet, sizeof...(Args) + offet>())));
+                    detail::push(vm, arr);
+                    return 1;
+                } catch (std::exception& e) {
+                    return sq_throwerror(vm, e.what());
+                }
+            }
+        };
+
 
         template<typename R, typename... Args>
         static void addFunc(HSQUIRRELVM vm, const char* name, const std::function<R(Args...)>& func) {

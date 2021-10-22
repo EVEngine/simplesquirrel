@@ -707,6 +707,24 @@ TEST_CASE("Test passing instance") {
 }
 
 
+TEST_CASE("Test return vector") {
+    ssq::VM vm(1024);
+
+    vm.addFunc("baz", [&]() -> std::vector<int> {
+        return {10, 2, 100, 1, 5};
+    });
+
+    static const std::string source = R"(
+		local data = baz();
+        print(data);
+        for (local i = 0; i < 5; ++i)
+            print(data[i]);
+    )";
+
+    ssq::Script script = vm.compileSource(source.c_str());
+    vm.run(script);
+}
+
 TEST_CASE("Test return tuple") {
     ssq::VM vm(1024);
 
@@ -715,20 +733,11 @@ TEST_CASE("Test return tuple") {
     });
 
     static const std::string source = R"(
-		local data, data2 = baz();
-        function SquirrelFunc()
-        {
-        return 1,2;
-        }
-
-        local test,test2 = SquirrelFunc();
-        print(test);
-        print(test2);
-        print(data);
-        print(data2);
+		local data = baz();
+        print(data[0]);
+        print(data[1]);
     )";
 
     ssq::Script script = vm.compileSource(source.c_str());
     vm.run(script);
-
 }
